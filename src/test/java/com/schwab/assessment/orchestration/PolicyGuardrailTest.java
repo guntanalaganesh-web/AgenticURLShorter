@@ -1,6 +1,10 @@
 package com.schwab.assessment.orchestration;
 
+import com.schwab.assessment.orchestration.model.CoverageReporting;
+import com.schwab.assessment.orchestration.model.MigrationAudit;
+import com.schwab.assessment.orchestration.model.OpenApiPublished;
 import com.schwab.assessment.orchestration.model.PipelineContext;
+import com.schwab.assessment.orchestration.model.PolicyScannable;
 import com.schwab.assessment.orchestration.model.PolicyViolationException;
 import com.schwab.assessment.orchestration.model.Stage;
 import com.schwab.assessment.orchestration.model.StageHandler;
@@ -64,8 +68,94 @@ class PolicyGuardrailTest {
         assertEquals("PII-IN-REQUIREMENTS", exception.getRule());
     }
 
+    // --- IMPLEMENTATION stage: PolicyGuardrail scans the TASK_PLANNING
+    // artifact (not an "IMPLEMENTATION artifact" -- there isn't one yet at
+    // the point this guardrail runs, since it gates whether IMPLEMENTATION
+    // is even allowed to start). See PolicyGuardrail.validateImplementation(). ---
+
+    @Test
+    void hardcodedPasswordInTaskPlan_rejectedAtImplementationStage() {
+        PipelineContext context = contextWithRequirement("Build a URL shortener");
+        context.setArtifact(Stage.TASK_PLANNING,
+                new FakeScannableArtifact("Task: set password=hunter2 in application.yml for now"));
+
+        PolicyViolationException exception = assertThrows(PolicyViolationException.class,
+                () -> guardrail.validate(Stage.IMPLEMENTATION, context));
+        assertEquals("NO-HARDCODED-SECRETS", exception.getRule());
+    }
+
+    @Test
+    void sqlInjectionPatternInTaskPlan_rejectedAtImplementationStage() {
+        PipelineContext context = contextWithRequirement("Build a URL shortener");
+        context.setArtifact(Stage.TASK_PLANNING,
+                new FakeScannableArtifact("query = \"SELECT * FROM users WHERE id='\" + userId"));
+
+        PolicyViolationException exception = assertThrows(PolicyViolationException.class,
+                () -> guardrail.validate(Stage.IMPLEMENTATION, context));
+        assertEquals("OWASP-TOP10-PATTERN", exception.getRule());
+    }
+
+    @Test
+    void cleanTaskPlan_passesImplementationStage() {
+        PipelineContext context = contextWithRequirement("Build a URL shortener");
+        context.setArtifact(Stage.TASK_PLANNING,
+                new FakeScannableArtifact("Implement UrlService with Redis cache-aside reads"));
+
+        assertDoesNotThrow(() -> guardrail.validate(Stage.IMPLEMENTATION, context));
+    }
+
+    // --- RELEASE_READINESS stage: coverage, then OpenAPI spec, then migration
+    // review, checked in that order (see PolicyGuardrail.validateReleaseReadiness()) --
+    // so a "passes" test must satisfy all three, not just the one under test. ---
+
+    @Test
+    void coverageBelowThreshold_rejectedAtReleaseReadinessStage() {
+        PipelineContext context = contextWithRequirement("Build a URL shortener");
+        context.setArtifact(Stage.TESTING, new FakeCoverageArtifact(74.0));
+
+        PolicyViolationException exception = assertThrows(PolicyViolationException.class,
+                () -> guardrail.validate(Stage.RELEASE_READINESS, context));
+        assertEquals("COVERAGE-THRESHOLD", exception.getRule());
+    }
+
+    @Test
+    void coverageAboveThreshold_passesReleaseReadinessStage() {
+        PipelineContext context = contextWithRequirement("Build a URL shortener");
+        context.setArtifact(Stage.TESTING, new FakeCoverageArtifact(82.0));
+        context.setArtifact(Stage.DOCUMENTATION, new FakeDocArtifact(true, "/v3/api-docs"));
+        context.setArtifact(Stage.IMPLEMENTATION, new FakeMigrationArtifact(true, 2));
+
+        assertDoesNotThrow(() -> guardrail.validate(Stage.RELEASE_READINESS, context));
+    }
+
+    @Test
+    void openApiSpecMissing_rejectedAtReleaseReadinessStage() {
+        PipelineContext context = contextWithRequirement("Build a URL shortener");
+        context.setArtifact(Stage.TESTING, new FakeCoverageArtifact(82.0));
+        context.setArtifact(Stage.DOCUMENTATION, new FakeDocArtifact(false, null));
+
+        PolicyViolationException exception = assertThrows(PolicyViolationException.class,
+                () -> guardrail.validate(Stage.RELEASE_READINESS, context));
+        assertEquals("OPENAPI-SPEC-REQUIRED", exception.getRule());
+    }
+
     private PipelineContext contextWithRequirement(String requirement) {
         Map<Stage, StageHandler> handlers = new EnumMap<>(Stage.class);
         return new PipelineContext(UUID.randomUUID(), "test", requirement, mock(ContextStore.class), handlers);
+    }
+
+    // Minimal fakes for the marker interfaces PolicyGuardrail inspects artifacts
+    // through -- same "record component name matches interface accessor" pattern
+    // the real scenario artifacts (TaskPlan, TestReport, ...) already use.
+    private record FakeScannableArtifact(String policyScanText) implements PolicyScannable {
+    }
+
+    private record FakeCoverageArtifact(double coveragePercentage) implements CoverageReporting {
+    }
+
+    private record FakeDocArtifact(boolean hasOpenApiSpec, String openApiLocation) implements OpenApiPublished {
+    }
+
+    private record FakeMigrationArtifact(boolean migrationScriptsReviewed, int migrationCount) implements MigrationAudit {
     }
 }
