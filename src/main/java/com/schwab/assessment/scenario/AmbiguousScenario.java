@@ -155,9 +155,14 @@ public class AmbiguousScenario {
     }
 
     private StageExecutionResult implementation(PipelineContext context, Stage stage, int attempt) {
+        ArchitectureDocument arch = context.getArtifact(Stage.ARCHITECTURE, ArchitectureDocument.class);
+        String rateLimit = arch.techStackRationale().getOrDefault(RATE_LIMIT_KEY, "100 req/min");
+
         ImplementationSummary summary = new ImplementationSummary(
                 List.of("RateLimiterService", "RateLimitInterceptor", "RateLimiterProperties"), 10, 0, true);
-        return StageExecutionResult.success(summary, "3 classes created, 10 tests written");
+        return StageExecutionResult.success(summary,
+                "3 classes created, 10 tests written; rate limiter configured at " + rateLimit
+                        + " per IP (sliding window)");
     }
 
     private StageExecutionResult testing(PipelineContext context, Stage stage, int attempt) {
