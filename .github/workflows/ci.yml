@@ -21,6 +21,12 @@ jobs:
           java-version: '17'
           cache: maven
 
+      # Repo is developed on Windows, where git doesn't track the executable
+      # bit -- mvnw can land in the index as mode 100644. Make sure it's
+      # runnable here regardless of what mode it was committed with.
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
       - name: Run unit tests
         run: ./mvnw test -Dtest='!*IntegrationTest' --no-transfer-progress -B
 
