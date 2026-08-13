@@ -30,8 +30,10 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
-      # Local Docker Redis needs neither; a managed provider (e.g. Render's
-      # Key Value, which requires both auth and TLS externally) sets both.
+      # Local Docker Redis needs none of these; a managed provider (e.g.
+      # Render's Key Value, which requires ACL username+password and TLS
+      # for external connections) sets all three.
+      username: ${SPRING_REDIS_USERNAME:}
       password: ${SPRING_REDIS_PASSWORD:}
       ssl:
         enabled: ${SPRING_REDIS_SSL_ENABLED:false}
