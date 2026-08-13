@@ -1,0 +1,120 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: schwab-postgres
+    environment:
+      POSTGRES_DB: schwab_assessment
+      POSTGRES_USER: schwab
+      POSTGRES_PASSWORD: schwab
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schwab -d schwab_assessment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - schwab-net
+
+  redis:
+    image: redis:7
+    container_name: schwab-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - schwab-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: schwab-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      # cp-zookeeper 7.5's image has no netcat, and the 4-letter-word ruok
+      # command is whitelist-restricted by default; the AdminServer's HTTP
+      # endpoint (curl, which the image does include) is a reliable
+      # equivalent, returning error:null once ZK is actually serving.
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/commands/ruok | grep -q '\"error\" : null'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - schwab-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: schwab-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    networks:
+      - schwab-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: schwab-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      # Host port 8080 is often taken locally (e.g. Oracle XDB's HTTP
+      # listener defaults to it); map to 8081 on the host, container
+      # still listens on 8080 internally.
+      - "8081:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/schwab_assessment
+      SPRING_DATASOURCE_USERNAME: schwab
+      SPRING_DATASOURCE_PASSWORD: schwab
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      ORCHESTRATION_GATES_AUTO_APPROVE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - schwab-net
+
+networks:
+  schwab-net:
+    driver: bridge
+
+volumes:
+  postgres-data:

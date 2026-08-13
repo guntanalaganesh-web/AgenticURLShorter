@@ -1,0 +1,105 @@
+spring:
+  application:
+    name: url-shortener-orchestration
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/schwab_assessment}
+    username: ${SPRING_DATASOURCE_USERNAME:schwab}
+    password: ${SPRING_DATASOURCE_PASSWORD:schwab}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: url-shortener-analytics
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.schwab.assessment.model
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+orchestration:
+  gates:
+    auto-approve: ${ORCHESTRATION_GATES_AUTO_APPROVE:true}
+  retry:
+    max-attempts: 3
+    initial-backoff-ms: 500
+    backoff-multiplier: 2
+
+rate-limiter:
+  requests-per-minute: ${RATE_LIMITER_RPM:100}
+
+shortlink:
+  base-code-length: 8
+  default-ttl-hours: 8760
+  redirect:
+    permanent: false
+  allowed-url-schemes: http,https
+  blocked-host-patterns: localhost,127.0.0.1,0.0.0.0,169.254.169.254,10.,172.16.,192.168.,::1
+
+logging:
+  level:
+    com.schwab.assessment: INFO
+    org.springframework.web: INFO
