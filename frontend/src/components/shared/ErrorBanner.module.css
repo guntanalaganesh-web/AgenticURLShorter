@@ -1,0 +1,36 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-failed-bg);
+  border: var(--border-width) solid var(--color-failed);
+  border-left-width: var(--border-width-accent);
+  border-radius: var(--radius-md);
+}
+
+.message {
+  font-size: var(--text-sm);
+  color: var(--color-fg);
+}
+
+.message strong {
+  color: var(--color-failed);
+  font-weight: var(--weight-medium);
+}
+
+.retry {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-failed);
+  border: var(--border-width) solid var(--color-failed);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.retry:hover {
+  background: var(--color-failed-bg);
+}

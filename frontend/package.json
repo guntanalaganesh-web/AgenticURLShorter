@@ -1,0 +1,50 @@
+{
+  "//": [
+    "STACK JUSTIFICATION (package.json can't hold a real comment, so it lives here):",
+    "React 18 + Vite + TypeScript, nothing else load-bearing.",
+    "- Vite over CRA: CRA is unmaintained and its dev-server rebuild time (webpack, full reload) doesn't fit a",
+    "  2-day single-dev build with a live-polling view under active iteration. Vite's esbuild dev server and",
+    "  native ESM HMR make the poll-driven UI genuinely fast to iterate on.",
+    "- React over Vanilla TS: this app is state-machine-shaped (7 stage nodes each with independent",
+    "  status/attempt/duration, three concurrent poll-driven views, gate approval flows with optimistic",
+    "  updates). React's reconciliation is exactly the right tool for 'render N nodes whose state changes",
+    "  independently and rapidly on a poll tick' -- hand-rolling that in vanilla TS is solved-problem",
+    "  reinvention for zero benefit at this scope.",
+    "- React over Next.js: Next's value is SSR/SSG/file routing/API routes. This is a local-only SPA against",
+    "  one existing Spring Boot API with three views and no SEO surface -- none of Next's machinery earns its",
+    "  keep here, and it would add a build/runtime model the assessment doesn't need.",
+    "- No UI library (MUI/Ant/Chakra/shadcn/Radix): the brief explicitly wants something that doesn't read as",
+    "  a template, and every one of these libraries has a visual signature a senior reviewer recognizes on",
+    "  sight. Hand-written components also mean every spacing/color/motion value traces back to tokens.css,",
+    "  not a library's internal defaults fighting the override layer.",
+    "- No Tailwind: utility-class soup in JSX obscures the actual design decisions and makes 'why is this",
+    "  16px and not 12px' unanswerable at a glance. Plain CSS modules-per-component, all values sourced from",
+    "  tokens.css custom properties, keep every decision inspectable and intentional.",
+    "- No charting library: the skill's chart domain is for trend/comparison/proportion data visualization.",
+    "  This dashboard has no charts -- it has a dependency graph (SVG connectors I own) and data tables. A",
+    "  charting library would be a dependency with no job to do.",
+    "- TypeScript: the API surface (7 stages x 6 states, gate decisions, decision/ambiguity records) is exactly",
+    "  the kind of shape that's easy to get subtly wrong at a fetch boundary. Typed responses catch that at",
+    "  compile time instead of in a demo."
+  ],
+  "name": "orchestration-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

@@ -12,10 +12,15 @@ See [`docs/architecture-overview.md`](docs/architecture-overview.md) for how the
 [`docs/engineering-summary.md`](docs/engineering-summary.md) for the full rationale, trade-offs, and
 known limitations.
 
+A visual dashboard for the engine -- a live dependency-graph view of the pipeline, a scenario runner,
+and a decision-log browser -- lives in [`frontend/`](frontend/README.md). It's a separate concern from
+the backend below and has its own setup instructions.
+
 ## Prerequisites
 
 - Docker and Docker Compose
 - JDK 17 (only needed if you want to run Maven directly instead of via Docker)
+- Node 18+ (only needed for the dashboard in `frontend/`)
 - `curl` (or any HTTP client) for the commands below
 
 No local Maven install is required -- this repo vendors the Maven Wrapper (`mvnw` / `mvnw.cmd`), which

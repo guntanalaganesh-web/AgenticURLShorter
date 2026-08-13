@@ -64,6 +64,14 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+      # Actuator endpoints are served by a separate handler mapping from
+      # regular @RestControllers (WebMvcEndpointHandlerMapping, not
+      # RequestMappingHandlerMapping), so WebConfig's addCorsMappings
+      # doesn't cover them -- the dashboard's connection indicator polls
+      # /actuator/health directly and needs this set independently.
+      cors:
+        allowed-origins: ${DASHBOARD_ORIGIN:http://localhost:5173}
+        allowed-methods: GET
   endpoint:
     health:
       show-details: always

@@ -1,0 +1,139 @@
+/**
+ * Design tokens for the orchestration dashboard.
+ *
+ * Source: ui-ux-pro-max skill data, read directly from
+ * .claude/skills/ui-ux-pro-max/data/{styles,colors,typography}.csv
+ * (Python wasn't available to run search.py, so these are the same rows
+ * the script would have returned, read by hand):
+ *   - styles.csv #28 "Data-Dense Dashboard"   -> spacing/grid/density values
+ *   - styles.csv #31 "Real-Time Monitoring"   -> live-indicator pulse, alert colors
+ *   - colors.csv  #6 "Financial Dashboard"    -> the dark neutral base + accents
+ *   - typography.csv #42 "Dashboard Data"     -> Fira Code + Fira Sans pairing
+ *
+ * Every spacing, color, radius, and duration value used anywhere in this
+ * app must trace back to a token defined here. No magic numbers in
+ * component CSS.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* Color -- near-black neutral base, 4 functional status colors max */
+  /* ---------------------------------------------------------------- */
+
+  --color-bg: #020617;
+  --color-bg-inset: #05070f;
+  --color-surface: #0e1223;
+  --color-surface-raised: #141a30;
+  --color-fg: #f8fafc;
+  --color-fg-secondary: #cbd5e1;
+  --color-fg-muted: #94a3b8;
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+
+  /* Functional status colors (4, outside neutrals) -- shape/position carry
+     meaning too; these are never the only signal (see StatusBadge). */
+  --color-completed: #22c55e;
+  --color-completed-bg: rgba(34, 197, 94, 0.12);
+  --color-active: #f59e0b;
+  --color-active-bg: rgba(245, 158, 11, 0.12);
+  --color-failed: #ef4444;
+  --color-failed-bg: rgba(239, 68, 68, 0.14);
+  --color-blocked: #8b5cf6;
+  --color-blocked-bg: rgba(139, 92, 246, 0.12);
+
+  /* PENDING/SKIPPED deliberately have no named color -- they recede,
+     rendered in --color-fg-muted / --color-border only. */
+
+  /* ---------------------------------------------------------------- */
+  /* Typography -- one sans family (UI), one mono family (data)       */
+  /* ---------------------------------------------------------------- */
+
+  --font-sans: "Fira Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Fira Code", "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  --weight-regular: 400;
+  --weight-medium: 600;
+
+  /* Scale: dense-dashboard body size (12-14px per Data-Dense Dashboard
+     style spec), not the 16px marketing-page minimum -- this is a desktop
+     internal tool, not a mobile page needing auto-zoom prevention. */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  --leading-tight: 1.25;
+  --leading-base: 1.5;
+
+  --tracking-label: 0.06em;
+
+  /* ---------------------------------------------------------------- */
+  /* Spacing -- 4px base, everything derives from this                */
+  /* ---------------------------------------------------------------- */
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---------------------------------------------------------------- */
+  /* Shape -- restrained; this is not a rounded-everything SaaS product */
+  /* ---------------------------------------------------------------- */
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --border-width: 1px;
+  --border-width-accent: 2px;
+
+  /* Icon scale -- every inline glyph in the app sizes from one of these
+     three, never an arbitrary one-off value. */
+  --icon-xs: 10px;
+  --icon-sm: 12px;
+  --icon-md: 14px;
+
+  /* ---------------------------------------------------------------- */
+  /* Motion -- mechanical state change, not celebration               */
+  /* ---------------------------------------------------------------- */
+
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+  --duration-pulse: 2000ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-linear: linear;
+
+  /* ---------------------------------------------------------------- */
+  /* Layout                                                            */
+  /* ---------------------------------------------------------------- */
+
+  --nav-width: 240px;
+  --header-height: 56px;
+  --grid-gap: 8px;
+  --card-padding: 12px;
+
+  /* ---------------------------------------------------------------- */
+  /* Z-index scale                                                     */
+  /* ---------------------------------------------------------------- */
+
+  --z-base: 0;
+  --z-elevated: 10;
+  --z-overlay: 100;
+  --z-toast: 1000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-pulse: 0ms;
+  }
+}
