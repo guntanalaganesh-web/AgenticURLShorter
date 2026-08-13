@@ -99,6 +99,27 @@ class RateLimiterServiceTest {
     }
 
     @Test
+    void windowExpiry_allowsNewRequestsOnceOldEntriesAgeOut() {
+        // RateLimiterService has no injectable Clock -- it calls
+        // System.currentTimeMillis() directly -- so there's no fake-clock seam
+        // to advance (Option A from the task doesn't apply here). Rather than
+        // stub zCard() to return 0 (Option B), seed the fake ZSET directly
+        // with entries already outside the 60s window: checkAndRecord's own
+        // removeRangeByScore(key, 0, windowStart) call is what evicts them,
+        // so this exercises the real eviction path instead of bypassing it.
+        String clientIp = "203.0.113.99";
+        String key = "ratelimit:" + clientIp;
+        double sixtyOneSecondsAgo = System.currentTimeMillis() - Duration.ofSeconds(61).toMillis();
+        for (int i = 0; i < 100; i++) {
+            windowFor(key).put("expired-" + i, sixtyOneSecondsAgo);
+        }
+
+        RateLimiterService.RateLimitDecision decision = service.checkAndRecord(clientIp);
+
+        assertTrue(decision.allowed(), "a request should be allowed once every prior entry has aged out of the window");
+    }
+
+    @Test
     void tracksSeparateClientsIndependently() {
         for (int i = 0; i < 100; i++) {
             assertTrue(service.checkAndRecord("203.0.113.5").allowed());
