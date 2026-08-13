@@ -120,3 +120,31 @@ The most consequential orchestration-specific decisions, and why, are detailed a
   rather than a bolted-on special code path for "handle architecture revisions."
 - **Human gates block on a real `CompletableFuture`**, resolved by a separate HTTP call, so the manual-
   approval mode is genuinely demonstrable rather than simulated with a sleep-and-poll loop.
+
+## What I would change with more time
+
+- **WebSocket push instead of polling.** The frontend currently polls `GET /orchestration/status` every 2
+  seconds. A WebSocket or Server-Sent Events endpoint would push stage transitions in real time -- lower
+  latency, fewer wasted requests, and a cleaner demo when showing gate approval live.
+
+- **StageHandlers as independent microservices.** Today all three scenario handlers run inside the same
+  JVM. In a production agentic system each `StageHandler` would be a separate service that registers with
+  the `OrchestrationEngine` via a discovery mechanism and communicates over Kafka topics -- true
+  multi-agent architecture where each agent has its own autonomy boundary, failure domain, and deployment
+  lifecycle.
+
+- **Prometheus + Grafana in docker-compose.** `ObservabilityCollector` emits all reliability metrics via
+  Micrometer and they're accessible at `/actuator/prometheus`, but there's no visualization layer. Adding
+  a pre-configured Grafana dashboard with panels for stage success rate, retry frequency, MTTR, and
+  end-to-end latency would make the observability story immediately visible without curl.
+
+- **Real code generation via a templating engine.** The IMPLEMENTATION stage handler produces an
+  `ImplementationSummary` describing what was built. With more time, the handler would use a templating
+  engine (e.g. JTE or StringTemplate) to generate actual compilable Java source for the URL shortener from
+  the `ArchitectureDocument`, making the greenfield scenario literally build the service it describes
+  rather than describing a build that already exists.
+
+- **Persistent Micrometer storage.** On Render's free tier, metrics are in-memory only -- a dyno restart
+  loses all counters and timer history. Wiring Micrometer to a remote write endpoint (Prometheus remote
+  write, InfluxDB, or Grafana Cloud's free tier) would give durable metric history across restarts, which
+  matters for MTTR tracking across multiple runs.
