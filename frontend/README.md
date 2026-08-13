@@ -4,6 +4,12 @@ Frontend for the agentic SDLC orchestration engine in the parent repo. See
 [`src/main.tsx`](src/main.tsx) for the design rationale and final quality-check notes, and
 [`package.json`](package.json) for the stack justification.
 
+## Live
+
+**https://frontend-nu-steel-80.vercel.app** -- deployed on Vercel, talking to a Render-hosted backend at
+`https://schwab-orchestration.onrender.com`. See the parent repo's README ("How the live demo is
+deployed") for how both sides are wired together and the free-tier expiration date to know about.
+
 ## Setup
 
 ```bash
