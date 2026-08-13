@@ -65,6 +65,16 @@ public class ContextStore {
         return record;
     }
 
+    /**
+     * The full ambiguity log across every run, most recent first.
+     */
+    @Transactional(readOnly = true)
+    public List<AmbiguityRecord> getAmbiguityLog() {
+        return repository.findByKeyOrderByCreatedAtDesc(KEY_AMBIGUITY).stream()
+                .map(entity -> readEnvelope(entity, AmbiguityRecord.class))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<AmbiguityRecord> getAmbiguityLog(UUID runId) {
         return repository.findByRunIdAndKeyOrderByCreatedAtAsc(runId, KEY_AMBIGUITY).stream()

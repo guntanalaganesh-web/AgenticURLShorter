@@ -3,6 +3,8 @@ package com.schwab.assessment.api;
 import com.schwab.assessment.orchestration.ContextStore;
 import com.schwab.assessment.orchestration.GateKeeper;
 import com.schwab.assessment.orchestration.OrchestrationEngine;
+import com.schwab.assessment.orchestration.OrchestrationRunLogRepository;
+import com.schwab.assessment.orchestration.model.OrchestrationRunLogEntity;
 import com.schwab.assessment.orchestration.model.PipelineStatus;
 import com.schwab.assessment.orchestration.model.Stage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -31,11 +34,14 @@ public class OrchestrationController {
     private final OrchestrationEngine engine;
     private final GateKeeper gateKeeper;
     private final ContextStore contextStore;
+    private final OrchestrationRunLogRepository runLogRepository;
 
-    public OrchestrationController(OrchestrationEngine engine, GateKeeper gateKeeper, ContextStore contextStore) {
+    public OrchestrationController(OrchestrationEngine engine, GateKeeper gateKeeper, ContextStore contextStore,
+                                    OrchestrationRunLogRepository runLogRepository) {
         this.engine = engine;
         this.gateKeeper = gateKeeper;
         this.contextStore = contextStore;
+        this.runLogRepository = runLogRepository;
     }
 
     @Operation(summary = "Get pipeline status",
@@ -72,10 +78,15 @@ public class OrchestrationController {
                     + "resolutions for the current run.")
     @GetMapping("/orchestration/decisions")
     public ApiResponse<DecisionLogResponse> getDecisions() {
-        List<com.schwab.assessment.orchestration.model.AmbiguityRecord> ambiguities = engine.getCurrentRunId() != null
-                ? contextStore.getAmbiguityLog(engine.getCurrentRunId())
-                : List.of();
-        return ApiResponse.ok(new DecisionLogResponse(contextStore.getDecisionLog(), ambiguities));
+        return ApiResponse.ok(new DecisionLogResponse(contextStore.getDecisionLog(), contextStore.getAmbiguityLog()));
+    }
+
+    @Operation(summary = "Get run history", description = "The last 10 pipeline runs, most recent first.")
+    @GetMapping("/orchestration/runs")
+    public ApiResponse<List<RunLogEntry>> getRuns() {
+        return ApiResponse.ok(runLogRepository.findTop10ByOrderByStartedAtDesc().stream()
+                .map(RunLogEntry::from)
+                .toList());
     }
 
     private Stage parseStage(String stageId) {
@@ -88,5 +99,14 @@ public class OrchestrationController {
     }
 
     public record GateResolutionResponse(UUID runId, Stage stage, boolean approved, boolean resolved) {
+    }
+
+    /** Lean run-history row -- full metrics are available via /orchestration/decisions if needed. */
+    public record RunLogEntry(UUID runId, String scenarioType, Instant startedAt, Instant completedAt,
+                               Boolean success) {
+        static RunLogEntry from(OrchestrationRunLogEntity entity) {
+            return new RunLogEntry(entity.getRunId(), entity.getScenarioType(), entity.getStartedAt(),
+                    entity.getCompletedAt(), entity.getSuccess());
+        }
     }
 }
