@@ -31,6 +31,7 @@ public class PipelineContext {
     private final Map<Stage, StageHandler> handlers;
     private final Map<Stage, StageState> stageStates = new ConcurrentHashMap<>();
     private final Map<Stage, Object> artifacts = new ConcurrentHashMap<>();
+    private final Map<Stage, StageResult> stageResults = new ConcurrentHashMap<>();
     private final Map<Stage, List<Runnable>> postStageHooks = new ConcurrentHashMap<>();
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
     private final Deque<Checkpoint> checkpoints = new ArrayDeque<>();
@@ -107,6 +108,19 @@ public class PipelineContext {
         return new EnumMap<>(artifacts);
     }
 
+    /**
+     * Records the attempt count and timing of a stage's most recent
+     * {@link StageExecutor} run, success or failure, for the dashboard to
+     * render per-stage duration and retry count.
+     */
+    public void setStageResult(Stage stage, StageResult result) {
+        stageResults.put(stage, result);
+    }
+
+    public Map<Stage, StageResult> snapshotStageResults() {
+        return new EnumMap<>(stageResults);
+    }
+
     public Object getAttribute(String key) {
         return attributes.get(key);
     }
@@ -171,6 +185,7 @@ public class PipelineContext {
             if (stageStates.get(dependent) == StageState.COMPLETED) {
                 setState(dependent, StageState.PENDING);
                 artifacts.remove(dependent);
+                stageResults.remove(dependent);
                 invalidated.add(dependent);
             }
         }

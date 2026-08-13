@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -121,6 +122,11 @@ public class OrchestrationEngine {
         }
 
         context.setState(stage, StageState.RUNNING);
+        // Placeholder result so the dashboard can compute elapsed time for a
+        // still-running stage; attemptCount 0 distinguishes it from a real,
+        // resolved StageResult, which overwrites this once execute() returns.
+        context.setStageResult(stage, new StageResult(stage, context.getRunId(), 0, Instant.now(), Instant.now(),
+                false, null, null));
 
         try {
             guardrail.validate(stage, context);
@@ -141,6 +147,7 @@ public class OrchestrationEngine {
 
         StageResult result = executor.execute(context, stage);
         observability.record(result);
+        context.setStageResult(stage, result);
 
         if (result.success()) {
             context.setState(stage, StageState.COMPLETED);

@@ -1,6 +1,7 @@
 package com.schwab.assessment.orchestration.model;
 
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,6 +15,7 @@ public record PipelineStatus(
         String requirement,
         String overallStatus,
         Map<Stage, StageState> stageStates,
+        Map<Stage, StageTiming> stageTimings,
         boolean halted,
         String haltReason,
         Instant startedAt,
@@ -30,12 +32,15 @@ public record PipelineStatus(
         } else {
             overall = "RUNNING";
         }
+        Map<Stage, StageTiming> timings = new EnumMap<>(Stage.class);
+        context.snapshotStageResults().forEach((stage, result) -> timings.put(stage, StageTiming.from(result)));
         return new PipelineStatus(
                 context.getRunId(),
                 context.getScenarioType(),
                 context.getRequirement(),
                 overall,
                 context.snapshotStates(),
+                timings,
                 context.isHalted(),
                 context.getHaltReason(),
                 context.getStartedAt(),
