@@ -11,8 +11,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Registers cross-cutting web infrastructure: the sliding-window rate
  * limiter (applied to every request except infrastructure endpoints), and
  * CORS for the orchestration dashboard, which runs on Vite's dev server
- * origin -- a different origin than the API, so the browser enforces CORS
- * on every request unless explicitly allowed here.
+ * origin locally and on Vercel in production -- a different origin than
+ * the API either way, so the browser enforces CORS on every request
+ * unless explicitly allowed here.
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -35,7 +36,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")
+                .allowedOriginPatterns(
+                        "http://localhost:*",
+                        "http://127.0.0.1:*",
+                        // Vercel deployment of frontend/: the stable production alias plus
+                        // every per-deployment/preview URL Vercel generates for this project.
+                        "https://frontend-*-ganeshs-projects-f3131830.vercel.app",
+                        "https://frontend-nu-steel-80.vercel.app")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
     }

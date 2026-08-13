@@ -30,6 +30,11 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
+      # Local Docker Redis needs neither; a managed provider (e.g. Render's
+      # Key Value, which requires both auth and TLS externally) sets both.
+      password: ${SPRING_REDIS_PASSWORD:}
+      ssl:
+        enabled: ${SPRING_REDIS_SSL_ENABLED:false}
       timeout: 2000ms
       lettuce:
         pool:
@@ -70,7 +75,10 @@ management:
       # doesn't cover them -- the dashboard's connection indicator polls
       # /actuator/health directly and needs this set independently.
       cors:
-        allowed-origins: ${DASHBOARD_ORIGIN:http://localhost:5173}
+        allowed-origin-patterns: >-
+          ${DASHBOARD_ORIGIN:http://localhost:5173},
+          https://frontend-*-ganeshs-projects-f3131830.vercel.app,
+          https://frontend-nu-steel-80.vercel.app
         allowed-methods: GET
   endpoint:
     health:
