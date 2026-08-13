@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Run unit tests
+        run: ./mvnw test -Dtest='!*IntegrationTest' --no-transfer-progress -B
+
+      # Integration tests use @Testcontainers (real Postgres/Redis/Kafka
+      # containers, started on demand) rather than fixed service containers,
+      # so no `services:` block is needed here -- GitHub-hosted ubuntu-latest
+      # runners have Docker available out of the box for Testcontainers to
+      # talk to.
+      - name: Run integration tests
+        run: ./mvnw test -Dtest='*IntegrationTest' --no-transfer-progress -B
+
+      - name: Full verify (package + all tests)
+        run: ./mvnw verify --no-transfer-progress -B
+
+      # This pom has no failsafe plugin configured -- integration tests run
+      # through the same surefire `test` phase as unit tests, so surefire is
+      # the only reports directory that exists.
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: target/surefire-reports/
